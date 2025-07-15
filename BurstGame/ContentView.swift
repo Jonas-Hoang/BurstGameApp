@@ -8,9 +8,6 @@
 import SwiftUI
 import AVFoundation
 
-
-
-
 struct ContentView: View {
     enum GameState: Equatable {
         case ready
@@ -24,9 +21,12 @@ struct ContentView: View {
     @State private var startTime: Date?
     @State private var delay: Double = 0
     @State private var showConfetti = false
+    @State private var confettiOffsets: [CGFloat] = []
+    @State private var reactionHistory: [Double] = UserDefaults.standard.array(forKey: "ReactionHistory") as? [Double] ?? []
+    @State private var audioPlayer: AVAudioPlayer?
 
     var body: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: 20) {
             Text("🎯 Dopamine Burst Game")
                 .font(.largeTitle)
                 .bold()
@@ -46,6 +46,10 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(buttonColor)
                         .frame(width: 200, height: 60)
+                        .shadow(color: gameState == .go ? .green.opacity(0.7) : .clear, radius: 10, x: 0, y: 0)
+                        .scaleEffect(gameState == .go ? 1.05 : 1.0)
+                        .animation(.easeInOut(duration: 0.5), value: gameState)
+
                     Text(buttonTitle)
                         .foregroundColor(.white)
                         .font(.title2)
@@ -55,13 +59,28 @@ struct ContentView: View {
             .buttonStyle(PlainButtonStyle())
 
             if showConfetti {
-                Text("🎊🎊🎊")
-                    .font(.system(size: 50))
-                    .transition(.scale)
+                ConfettiView()
+                    .transition(.opacity)
             }
+
+            Divider()
+
+            Text("📜 Lịch sử phản xạ")
+                .font(.headline)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(Array(reactionHistory.reversed().prefix(10).enumerated()), id: \.offset) { index, value in
+                        Text("#\(index + 1): \(String(format: "%.3f", value))s")
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .frame(height: 150)
+
+            Spacer()
         }
-        .frame(minWidth: 400, minHeight: 400)
         .padding()
+        .frame(minWidth: 400, minHeight: 600)
         .animation(.easeInOut, value: showConfetti)
     }
 
@@ -88,11 +107,13 @@ struct ContentView: View {
         case .ready:
             startWaiting()
         case .waiting:
+            // Bấm sớm quá
             gameState = .ready
         case .go:
             if let startTime = startTime {
                 let reactionTime = Date().timeIntervalSince(startTime)
                 gameState = .result(reactionTime)
+                updateHistory(reactionTime)
                 checkBestScore(reactionTime)
                 triggerReward()
             }
@@ -120,6 +141,11 @@ struct ContentView: View {
         }
     }
 
+    private func updateHistory(_ time: Double) {
+        reactionHistory.append(time)
+        UserDefaults.standard.set(reactionHistory, forKey: "ReactionHistory")
+    }
+
     private func triggerReward() {
         playSuccessSound()
         withAnimation {
@@ -128,7 +154,17 @@ struct ContentView: View {
     }
 
     private func playSuccessSound() {
-        NSSound(named: NSSound.Name("Glass"))?.play()
+        if let url = Bundle.main.url(forResource: "success", withExtension: "wav") {
+            do {
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+                audioPlayer?.play()
+            } catch {
+                print("Error playing custom sound: \(error)")
+            }
+        } else {
+            // Fallback sound
+            NSSound(named: NSSound.Name("Glass"))?.play()
+        }
     }
 }
 
