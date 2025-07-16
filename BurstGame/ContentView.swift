@@ -67,15 +67,34 @@ struct ContentView: View {
 
             Text("📜 Lịch sử phản xạ")
                 .font(.headline)
+            
             ScrollView {
-                VStack(alignment: .leading, spacing: 5) {
-                    ForEach(Array(reactionHistory.reversed().prefix(10).enumerated()), id: \.offset) { index, value in
-                        Text("#\(index + 1): \(String(format: "%.3f", value))s")
+                HStack(alignment: .top, spacing: 20) {
+                    // Recent History column
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Recent History")
+                            .font(.headline)
+                            .underline()
+                        ForEach(Array(reactionHistory.reversed().prefix(10).enumerated()), id: \.offset) { index, value in
+                            Text("#\(index + 1): \(String(format: "%.3f", value))s")
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Top 10 Fastest column
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Top 10 Fastest")
+                            .font(.headline)
+                            .underline()
+                        ForEach(Array(reactionHistory.sorted().prefix(10).enumerated()), id: \.offset) { index, value in
+                                Text("#\(index + 1): \(String(format: "%.3f", value))s")
+                            }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.horizontal)
+                .padding()
             }
-            .frame(height: 150)
+            .frame(maxWidth: .infinity, alignment: .center)
 
             Spacer()
         }
